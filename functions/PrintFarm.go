@@ -32,9 +32,9 @@ func PrintResult(ShortestPaths [][]string, AntsNumber int) {
 		for j := 0; j < LenPaths; j++ {
 			for t := 0; t < curr && t < len(AntAndPath[j]); t++ {
 				Position[AntAndPath[j][t]]++
-				if Position[AntAndPath[j][t]] < len(ShortestPaths[j]) {
-					fmt.Print("L", AntAndPath[j][t], "-", ShortestPaths[j][Position[AntAndPath[j][t]]])
-					fmt.Print(" ")
+				if Position[AntAndPath[j][t]] < len(ShortestPaths[j]){
+					fmt.Print( "\033[33m" + "L",   AntAndPath[j][t], "-", ShortestPaths[j][Position[AntAndPath[j][t]]] + "\033[0m")
+					fmt.Print("==>")
 					if Position[AntAndPath[j][t]] == len(ShortestPaths[j])-1 {
 						i++
 					}
