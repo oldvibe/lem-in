@@ -28,7 +28,6 @@
 // 		return
 // 	}
 
-	
 // 	fmt.Printf("Parse farm with %d ants\n  ", farm.NumAnts)
 // }
 
@@ -69,7 +68,7 @@
 // 				return nil, err
 // 			}
 // 		} else if strings.Contains(line, "-") {
-		
+
 // 			if err := parseLinks(farm, line); err != nil {
 // 				return nil, err
 // 			}
@@ -81,7 +80,6 @@
 // 		}
 // 	}
 
-	
 // 	for scanner.Scan() {
 // 		line := scanner.Text()
 // 		if strings.HasPrefix(line, "#") {
@@ -101,7 +99,7 @@
 // 	}
 
 // 	return farm, nil
-	
+
 // }
 
 // func parseLinks(farm *Graph, line string) error {
@@ -214,30 +212,19 @@
 // 	return result
 // }
 
-
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
-	"strconv"
-	"strings"
+
+	ants "ants/functions"
 )
 
-type Room struct {
-	Name string
-	X, Y int
-	Type string // "start", "end", or ""
-}
-
-type AntFarm struct {
-	NumAnts     int
-	Rooms       map[string]*Room
-	Connections map[string][]string
-	Start       string
-	End         string
-}
+type (
+	AntFarm = ants.AntFarm
+	Room    = ants.Room
+)
 
 func main() {
 	if len(os.Args) != 2 {
@@ -245,216 +232,62 @@ func main() {
 		return
 	}
 
-	farm, err := parseInput(os.Args[1])
+	farm, err := ants.ParseInput(os.Args[1])
 	if err != nil {
 		fmt.Printf("ERROR: invalid data format, %v\n", err)
 		return
 	}
+	jt := 1
+	// ants.FindPaths(farm)
+	ants.PrintFarm(farm)
+	fmt.Println(jt)
+	jt++
+	paths := ants.FindPaths(farm)
 
-	// Print the farm structure
-	printFarm(farm)
-
-	// Find paths and move ants
-	paths := findPaths(farm)
-	if len(paths) == 0 {
+	Unique := GetShortestPaths(paths)
+	for _, path := range Unique {
+		fmt.Println(path)
+	}
+	fmt.Println(jt)
+	jt++
+	if len(Unique) == 0 {
 		fmt.Println("ERROR: no valid path found")
 		return
 	}
+	fmt.Println(Unique)
+	jt++
 
-	moveAnts(farm, paths)
+	ants.PrintResult(Unique, farm.NumAnts)
+	fmt.Println(jt)
+	jt++
+
+	ants.MoveAntsOld(farm, Unique)
 }
 
-func parseInput(filename string) (*AntFarm, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	farm := &AntFarm{
-		Rooms:       make(map[string]*Room),
-		Connections: make(map[string][]string),
-	}
-
-	scanner := bufio.NewScanner(file)
-	
-	// Parse number of ants
-	if !scanner.Scan() {
-		return nil, fmt.Errorf("empty file")
-	}
-	if farm.NumAnts, err = strconv.Atoi(scanner.Text()); err != nil || farm.NumAnts <= 0 {
-		return nil, fmt.Errorf("invalid number of ants")
-	}
-
-	// Parse rooms and connections
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "##start" || line == "##end" {
-			if err := parseSpecialRoom(farm, scanner, line); err != nil {
-				return nil, err
+func GetShortestPaths(Paths [][]string) (ShortestPaths [][]string) {
+	PathsLenght := len(Paths)
+	for i := 0; i < PathsLenght; i++ {
+		AppendIt := true
+		for j := 0; j < len(ShortestPaths); j++ {
+			if MatchAnyRoom(Paths[i], ShortestPaths[j]) {
+				AppendIt = false
+				break
 			}
-		} else if strings.Contains(line, "-") {
-			if err := parseConnection(farm, line); err != nil {
-				return nil, err
-			}
-		} else if !strings.HasPrefix(line, "#") {
-			if err := parseRoom(farm, line, ""); err != nil {
-				return nil, err
+		}
+		if AppendIt {
+			ShortestPaths = append(ShortestPaths, Paths[i])
+		}
+	}
+	return
+}
+
+func MatchAnyRoom(RoomsOne, RoomsTwo []string) bool {
+	for i := 1; i < len(RoomsOne)-1; i++ {
+		for j := 1; j < len(RoomsTwo)-1; j++ {
+			if RoomsOne[i] == RoomsTwo[j] && i != 0 && i != len(RoomsOne)-1 {
+				return true
 			}
 		}
 	}
-
-	if err := validateFarm(farm); err != nil {
-		return nil, err
-	}
-
-	return farm, nil
-}
-
-func parseSpecialRoom(farm *AntFarm, scanner *bufio.Scanner, roomType string) error {
-	if !scanner.Scan() {
-		return fmt.Errorf("missing room after %s", roomType)
-	}
-	roomType = strings.TrimPrefix(roomType, "##")
-	if err := parseRoom(farm, scanner.Text(), roomType); err != nil {
-		return err
-	}
-	if roomType == "start" {
-		farm.Start = strings.Fields(scanner.Text())[0]
-	} else {
-		farm.End = strings.Fields(scanner.Text())[0]
-	}
-	return nil
-}
-
-func parseRoom(farm *AntFarm, line, roomType string) error {
-	parts := strings.Fields(line)
-	if len(parts) != 3 {
-		return fmt.Errorf("invalid room format: %s", line)
-	}
-	name, x, y := parts[0], parts[1], parts[2]
-	if name[0] == 'L' || name[0] == '#' {
-		return fmt.Errorf("invalid room name: %s", name)
-	}
-	xCoord, err := strconv.Atoi(x)
-	if err != nil {
-		return fmt.Errorf("invalid x coordinate: %s", x)
-	}
-	yCoord, err := strconv.Atoi(y)
-	if err != nil {
-		return fmt.Errorf("invalid y coordinate: %s", y)
-	}
-	if _, exists := farm.Rooms[name]; exists {
-		return fmt.Errorf("duplicate room: %s", name)
-	}
-	farm.Rooms[name] = &Room{Name: name, X: xCoord, Y: yCoord, Type: roomType}
-	return nil
-}
-
-func parseConnection(farm *AntFarm, line string) error {
-	parts := strings.Split(line, "-")
-	if len(parts) != 2 {
-		return fmt.Errorf("invalid connection format: %s", line)
-	}
-	room1, room2 := parts[0], parts[1]
-	if _, exists := farm.Rooms[room1]; !exists {
-		return fmt.Errorf("unknown room in connection: %s", room1)
-	}
-	if _, exists := farm.Rooms[room2]; !exists {
-		return fmt.Errorf("unknown room in connection: %s", room2)
-	}
-	farm.Connections[room1] = append(farm.Connections[room1], room2)
-	farm.Connections[room2] = append(farm.Connections[room2], room1)
-	return nil
-}
-
-func validateFarm(farm *AntFarm) error {
-	if farm.Start == "" {
-		return fmt.Errorf("no start room found")
-	}
-	if farm.End == "" {
-		return fmt.Errorf("no end room found")
-	}
-	return nil
-}
-
-func printFarm(farm *AntFarm) {
-	fmt.Println(farm.NumAnts)
-	for _, room := range farm.Rooms {
-		if room.Type == "start" {
-			fmt.Println("##start")
-		} else if room.Type == "end" {
-			fmt.Println("##end")
-		}
-		fmt.Printf("%s %d %d\n", room.Name, room.X, room.Y)
-	}
-	for room, connections := range farm.Connections {
-		for _, conn := range connections {
-			if room < conn {
-				fmt.Printf("%s-%s\n", room, conn)
-			}
-		}
-	}
-	fmt.Println()
-}
-
-func findPaths(farm *AntFarm) [][]string {
-	// Implement BFS to find the shortest path(s)
-	visited := make(map[string]bool)
-	queue := [][]string{{farm.Start}}
-	var paths [][]string
-
-	for len(queue) > 0 {
-		path := queue[0]
-		queue = queue[1:]
-		room := path[len(path)-1]
-
-		if room == farm.End {
-			paths = append(paths, path)
-			continue
-		}
-
-		if !visited[room] {
-			visited[room] = true
-			for _, nextRoom := range farm.Connections[room] {
-				if !visited[nextRoom] {
-					newPath := make([]string, len(path))
-					copy(newPath, path)
-					queue = append(queue, append(newPath, nextRoom))
-				}
-			}
-		}
-	}
-
-	return paths
-}
-
-func moveAnts(farm *AntFarm, paths [][]string) {
-	antPositions := make(map[int]int) // ant number -> position in path
-	for ant := 1; ant <= farm.NumAnts; ant++ {
-		antPositions[ant] = -1 // Start before the path
-	}
-
-	for {
-		moved := false
-		moves := make(map[int]string) // ant number -> room moved to
-
-		for ant := 1; ant <= farm.NumAnts; ant++ {
-			if antPositions[ant] < len(paths[0])-1 {
-				antPositions[ant]++
-				moves[ant] = paths[0][antPositions[ant]]
-				moved = true
-			}
-		}
-
-		if !moved {
-			break
-		}
-
-		var movesSlice []string
-		for ant, room := range moves {
-			movesSlice = append(movesSlice, fmt.Sprintf("L%d-%s", ant, room))
-		}
-		fmt.Println(strings.Join(movesSlice, " "))
-	}
+	return false
 }
