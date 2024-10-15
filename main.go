@@ -39,6 +39,6 @@ func main() {
 		fmt.Println("ERROR: no valid path found")
 		return
 	}
-	ants.PrintResult(Unique, farm.NumAnts)
-	//ants.SendAnts(Unique, farm.NumAnts)
+	ants.SendAnts(Unique, farm.NumAnts)
+
 }

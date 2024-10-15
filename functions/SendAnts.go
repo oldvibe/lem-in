@@ -2,49 +2,47 @@ package ants
 
 import (
 	"fmt"
+	"sort"
 )
 
-func SendAnts(Paths [][]string, Ants int) {
-	Ant := 1
-	PathsLength := len(Paths)
-	PhatsIndexLength := make([][]int, PathsLength)
-	for i := 0; i < PathsLength && Ant <= Ants; i++ {
-		if i != PathsLength-1 {
-			if len(PhatsIndexLength[i])+len(Paths[i]) > len(PhatsIndexLength[i+1])+len(Paths[i+1]) {
-				continue
+func SendAnts(ShortestPaths [][]string, AntsNumber int) {
+	sort.Slice(ShortestPaths, func(i, j int) bool {
+		return len(ShortestPaths[i]) < len(ShortestPaths[j])
+	})
+	AntAndPath := make([][]int, len(ShortestPaths))
+	LenPaths := len(ShortestPaths)
+	i := 1
+	for i <= AntsNumber {
+		for j := 0; j < LenPaths; j++ {
+			if LenPaths == 1 || j == LenPaths-1 && len(ShortestPaths[j-1])+len(AntAndPath[j-1]) > len(ShortestPaths[j])+len(AntAndPath[j]) || j != LenPaths-1 && len(ShortestPaths[j])+len(AntAndPath[j]) <= len(ShortestPaths[j+1])+len(AntAndPath[j+1]) {
+				AntAndPath[j] = append(AntAndPath[j], i)
+				i++
+				if i > AntsNumber {
+					break
+				}
+			} else {
+				break
 			}
 		}
-		if i != 0 {
-			if len(PhatsIndexLength[i])+len(Paths[i]) >= len(PhatsIndexLength[i-1])+len(Paths[i-1]) {
-				i = -1
-				continue
-			}
-		}
-		PhatsIndexLength[i] = append(PhatsIndexLength[i], Ant)
-		Ant++
-		i--
 	}
-	curr := 0
+	i = 1
+	curr := 1
 	Position := map[int]int{}
-	Ant = 1
-	for i := 0; i < len(PhatsIndexLength); i++ {
-		for j := 0; j <= curr && j < len(PhatsIndexLength[i]); j++ {
-			Position[PhatsIndexLength[i][j]]++
-			if Position[PhatsIndexLength[i][j]] < len(Paths[i]) {
-				if Position[PhatsIndexLength[i][j]] == len(Paths[i])-1 {
-					Ant++
-				}
-				fmt.Print("L", PhatsIndexLength[i][j], "-", Paths[i][Position[PhatsIndexLength[i][j]]])
-				if i != len(PhatsIndexLength) {
-					fmt.Print(" ")
+	for i <= AntsNumber {
+		for j := 0; j < LenPaths; j++ {
+			for t := 0; t < curr && t < len(AntAndPath[j]); t++ {
+				Position[AntAndPath[j][t]]++
+				if Position[AntAndPath[j][t]] < len(ShortestPaths[j]) {
+					fmt.Print("\033[33m"+"L", AntAndPath[j][t], "-", ShortestPaths[j][Position[AntAndPath[j][t]]]+"\033[0m")
+					fmt.Print("==>")
+					
+					if Position[AntAndPath[j][t]] == len(ShortestPaths[j])-1 {
+						i++
+					}
 				}
 			}
 		}
+		fmt.Println()
 		curr++
-		if i == len(PhatsIndexLength)-1 && Ant <= Ants{
-			i = -1
-			fmt.Println()
-		}
 	}
-	fmt.Println()
 }
